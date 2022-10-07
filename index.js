@@ -1,41 +1,127 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set } from 'firebase/database'
+import DiscordJS, { GatewayIntentBits, IntentsBitField } from 'discord.js'
+import dotenv from 'dotenv'
+import randString from 'randomstring'
+dotenv.config()
+
+const client = new DiscordJS.Client({
+  intents:[
+    IntentsBitField.Flags.Guilds,
+    IntentsBitField.Flags.GuildMessages,
+    IntentsBitField.Flags.GuildMessageReactions,
+    IntentsBitField.Flags.DirectMessages,
+    IntentsBitField.Flags.DirectMessageReactions,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.DirectMessageReactions
+  ]
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCxiGvnMIxYA77qJ758zHLR7QfUIjoPvMw",
+  authDomain: "ice-mar.firebaseapp.com",
+  databaseURL: "https://ice-mar-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ice-mar",
+  storageBucket: "ice-mar.appspot.com",
+  messagingSenderId: "613961239911",
+  appId: "1:613961239911:web:192a9b729db5051151f3c2"
+
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const discord_js_1 = __importStar(require("discord.js"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-const client = new discord_js_1.default.Client({
-    intents: [
-        discord_js_1.IntentsBitField.Flags.Guilds,
-        discord_js_1.IntentsBitField.Flags.GuildMessages
-    ]
+
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const prefix = '!alpha';
+const ownerID = "421288727659413504";
+
+//Jasons ID : 804567184218128414
+// My ID : 421288727659413504
+// Matmat ID : 863457330761826334
+
+client.on("messageCreate", (message) => {
+  if (message.author.bot) return;
+
+  if (!message.content.startsWith(prefix) || message.author.bot) return;
+
+	const args = message.content.slice(prefix.length).trim().split(' ');
+	let email = args?.shift()?.toLowerCase();
+  let randPass = randString.generate(5);
+  var canAccess = false;
+  let discordName = message.author.tag;
+
+  set(ref(database, '/users/' + message.author.username), {
+    email: email,
+    pass: randPass,
+    discord: discordName,
+    canAcc: false
+  });
+  
+  message.reply(discordName + " your request for alpha version of Ice Martians has been sent!");
+  
+  client.users.fetch(ownerID).then((user) => {
+  const DMsent = user.send('New alpha tester! \nEmail: ' + email + '\nDiscord username: ' + discordName + '\nShould he get access to the alpha version?').then(function (message){
+      message.react("👍");
+      message.react("👎");
+
+      const filter = (reaction, user) =>{
+        return (reaction.emoji.name == '👍' && reaction.count > 1) || (reaction.emoji.name == '👎' && reaction.count > 1)
+      };
+  
+      message.awaitReactions({filter, max: 1}).then(collected => {
+      const reaction = collected.first();
+
+      let newDisName = discordName;
+      newDisName = newDisName.substring(0, newDisName.length - 5);
+      
+      if (reaction.emoji.name === '👍') {
+        message.reply('You have approved ' + email);
+
+        let randPass = randString.generate(5);
+
+        const new_user = client.users.cache.find(user => user.username == newDisName).id;
+
+        client.users.fetch(new_user).then((user) => {
+          const DMsent = user.send("Good news, You have been accepted to the Ice Martians alpha version!\nYour login cradentials are:\nEmail: " + email + "\nPassowrd: " + randPass);
+        });
+
+        set(ref(database, '/users/' + newDisName), {
+          email: email,
+          pass: randPass,
+          discord: discordName,
+          canAcc: true
+        });
+
+      } else if(reaction.emoji.name === '👎') {
+        message.reply('You denied ' + email);
+
+        set(ref(database, '/users/' + newDisName), {
+          email: email,
+          pass: randPass,
+          discord: discordName,
+          canAcc: false
+        });
+
+      }
+     })
+
+  });
+
+
+  });
 });
-client.on('ready', () => {
-    console.log("The bot is online");
+
+client.on('messageReactionAdd', (reaction, user) => {
+  console.log('a reaction has been added');
 });
-client.login(process.env.TOKEN);
+
+
+
+
+//----------------------------------
+
+client.on('ready', () =>{
+    console.log("The bot is online!")
+})
+
+client.login(process.env.TOKEN)
