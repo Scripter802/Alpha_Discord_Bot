@@ -1,0 +1,23 @@
+{
+  "name": "icemaritansbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "devStart": "nodemon index.ts"
+  },
+  "keywords": [],
+  "author": "Gary",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.5.0",
+    "dotenv": "^16.0.3",
+    "firebase": "^9.10.0",
+    "randomstring": "^1.2.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.24.0",
+    "nodemon": "^2.0.20"
+  }
+}
